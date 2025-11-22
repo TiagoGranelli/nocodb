@@ -6172,9 +6172,9 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
         c.uidt === UITypes.LastModifiedTime &&
         (c.system ||
           (c.column_name &&
-            (
-              c.colOptions as LastModColumnOptions
-            )?.triggerColumnIds?.some((id) => updatedColIds.includes(id)))),
+            (c.colOptions as LastModColumnOptions)?.triggerColumnIds?.some(
+              (id) => updatedColIds.includes(id),
+            ))),
     );
 
     const lastModifiedByColumns = columns.filter(
@@ -6182,9 +6182,9 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
         c.uidt === UITypes.LastModifiedBy &&
         (c.system ||
           (c.column_name &&
-            (
-              c.colOptions as LastModColumnOptions
-            )?.triggerColumnIds?.some((id) => updatedColIds.includes(id)))),
+            (c.colOptions as LastModColumnOptions)?.triggerColumnIds?.some(
+              (id) => updatedColIds.includes(id),
+            ))),
     );
 
     for (const lastModifiedTimeColumn of lastModifiedTimeColumns) {
@@ -6472,14 +6472,12 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
           column.uidt,
         ) &&
         column.column_name &&
-        (column.colOptions as LastModColumnOptions)?.triggerColumnIds
-          ?.length &&
+        (column.colOptions as LastModColumnOptions)?.triggerColumnIds?.length &&
         !isInsertData
       ) {
         // check if any of the tracked columns are updating
-        const trackColumnIds = (
-          column.colOptions as LastModColumnOptions
-        )?.triggerColumnIds;
+        const trackColumnIds = (column.colOptions as LastModColumnOptions)
+          ?.triggerColumnIds;
 
         if (
           trackColumnIds.every((id) =>

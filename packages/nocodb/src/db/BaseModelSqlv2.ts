@@ -50,7 +50,8 @@ import type {
   UpdatePayload,
 } from 'nocodb-sdk';
 import type { Knex } from 'knex';
-import type CustomKnex, { XKnex } from '~/db/CustomKnex';
+import type CustomKnex from '~/db/CustomKnex';
+import type { XKnex } from '~/db/CustomKnex';
 import type { IBaseModelSqlV2 } from '~/db/IBaseModelSqlV2';
 import type {
   XcFilter,
@@ -66,8 +67,6 @@ import type {
 import type LookupColumn from '~/models/LookupColumn';
 import type { ResolverObj } from '~/utils';
 import { BaseModelDelete } from '~/db/BaseModelSqlv2/delete';
-import type { TrackModificationsColumnOptions } from '~/models/TrackModificationsColumn';
-import type { LastModColumnOptions } from '~/models/LastModColumn';
 import {
   batchUpdate,
   extractColsMetaForAudit,

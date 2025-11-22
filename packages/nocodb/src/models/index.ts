@@ -61,4 +61,4 @@ export { default as OAuthAuthorizationCode } from './OAuthAuthorizationCode';
 export { default as OAuthToken } from './OAuthToken';
 export { default as WorkspaceUser } from './WorkspaceUser';
 export { default as Workspace } from './Workspace';
-export { default as TrackModificationsColumn } from './TrackModificationsColumn';
+export { default as TrackModificationsColumn } from './LastModColumn';

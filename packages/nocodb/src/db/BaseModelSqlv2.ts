@@ -74,8 +74,8 @@ import {
   extractExcludedColumnNames,
   generateAuditV1Payload,
   nocoExecute,
-  processConcurrently,
   populateUpdatePayloadDiff,
+  processConcurrently,
   remapWithAlias,
   removeBlankPropsAndMask,
 } from '~/utils';
@@ -149,7 +149,6 @@ const JSON_COLUMN_TYPES = [UITypes.Button];
 const ORDER_STEP_INCREMENT = 1;
 
 const MAX_RECURSION_DEPTH = 2;
-
 
 const SELECT_REGEX = /^(\(|)select/i;
 const INSERT_REGEX = /^(\(|)insert/i;

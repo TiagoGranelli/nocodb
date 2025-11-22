@@ -35,7 +35,6 @@ import {
   UITypes,
 } from 'nocodb-sdk';
 import { v4 as uuidv4 } from 'uuid';
-import type { Knex } from 'knex';
 import type {
   BulkAuditV1OperationTypes,
   DataBulkDeletePayload,
@@ -50,8 +49,8 @@ import type {
   NcRequest,
   UpdatePayload,
 } from 'nocodb-sdk';
-import type CustomKnex from '~/db/CustomKnex';
-import type { XKnex } from '~/db/CustomKnex';
+import type { Knex } from 'knex';
+import type CustomKnex, { XKnex } from '~/db/CustomKnex';
 import type { IBaseModelSqlV2 } from '~/db/IBaseModelSqlV2';
 import type {
   XcFilter,
@@ -69,6 +68,30 @@ import type { ResolverObj } from '~/utils';
 import { BaseModelDelete } from '~/db/BaseModelSqlv2/delete';
 import type { TrackModificationsColumnOptions } from '~/models/TrackModificationsColumn';
 import type { LastModColumnOptions } from '~/models/LastModColumn';
+import {
+  batchUpdate,
+  extractColsMetaForAudit,
+  extractExcludedColumnNames,
+  generateAuditV1Payload,
+  nocoExecute,
+  processConcurrently,
+  populateUpdatePayloadDiff,
+  remapWithAlias,
+  removeBlankPropsAndMask,
+} from '~/utils';
+import {
+  Audit,
+  BaseUser,
+  Column,
+  FileReference,
+  Filter,
+  GridViewColumn,
+  Model,
+  PresignedUrl,
+  Sort,
+  Source,
+  View,
+} from '~/models';
 import { ncIsStringHasValue } from '~/db/field-handler/utils/handlerUtils';
 import { AttachmentUrlUploadPreparator } from '~/db/BaseModelSqlv2/attachment-url-upload-preparator';
 import { FieldHandler } from '~/db/field-handler';
@@ -106,32 +129,8 @@ import { defaultLimitConfig } from '~/helpers/extractLimitAndOffset';
 import { extractProps } from '~/helpers/extractProps';
 import getAst from '~/helpers/getAst';
 import { sanitize, unsanitize } from '~/helpers/sqlSanitize';
-import {
-  Audit,
-  BaseUser,
-  Column,
-  FileReference,
-  Filter,
-  GridViewColumn,
-  Model,
-  PresignedUrl,
-  Sort,
-  Source,
-  View,
-} from '~/models';
 import Noco from '~/Noco';
 import { HANDLE_WEBHOOK } from '~/services/hook-handler.service';
-import {
-  batchUpdate,
-  extractColsMetaForAudit,
-  extractExcludedColumnNames,
-  generateAuditV1Payload,
-  nocoExecute,
-  populateUpdatePayloadDiff,
-  processConcurrently,
-  remapWithAlias,
-  removeBlankPropsAndMask,
-} from '~/utils';
 import { MetaTable } from '~/utils/globals';
 import { chunkArray } from '~/utils/tsUtils';
 import { QUERY_STRING_FIELD_ID_ON_RESULT } from '~/constants';
@@ -6380,6 +6379,9 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
       undo?: boolean;
     },
   ): Promise<void> {
+    const runAfterForLoop = [];
+    const updatedColIds = [];
+
     // Handle autoincrement primary key columns for insert operations
     if (isInsertData && !extra?.undo) {
       // Handle primary key
@@ -6398,6 +6400,71 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
     }
 
     for (const column of this.model.columns) {
+      if (column.uidt === UITypes.Meta && this.isPg) {
+        runAfterForLoop.push(() => {
+          if (!updatedColIds.length) return;
+
+          data[column.column_name] = this.dbDriver.raw(
+            `
+            (
+  jsonb_set(
+  jsonb_set(
+    COALESCE(??::jsonb, '{}'::jsonb),          -- ensure base object
+    ARRAY[?::text],                       -- dynamic event key path
+    (
+      CASE
+        WHEN jsonb_typeof(COALESCE(??::jsonb, '{}'::jsonb)->(?::text)) = 'object'
+          THEN (COALESCE(??::jsonb, '{}'::jsonb)->(?::text))
+        ELSE '{}'::jsonb
+      END
+      || ?::jsonb                         -- merge your patch
+    ),
+    true                                  -- create missing
+  ),
+  '{lastModifiedBy}',
+             (
+               CASE
+                 WHEN jsonb_typeof(COALESCE(??::jsonb, '{}'::jsonb)->'lastModifiedBy') = 'object'
+                   THEN (COALESCE(??::jsonb, '{}'::jsonb)->'lastModifiedBy')
+                 ELSE '{}'::jsonb
+               END
+               || ?::jsonb                -- merge by patch
+             ),
+             true
+           )
+           )
+            `,
+            [
+              column.column_name,
+              'lastModifiedTime',
+              column.column_name,
+              'lastModifiedTime',
+              column.column_name,
+              'lastModifiedTime',
+              JSON.stringify(
+                updatedColIds.reduce(
+                  (obj, id) => ({ ...obj, [id]: this.now() }),
+                  {},
+                ),
+              ),
+              column.column_name,
+              column.column_name,
+              JSON.stringify(
+                updatedColIds.reduce(
+                  (obj, id) => ({ ...obj, [id]: cookie?.user?.id }),
+                  {},
+                ),
+              ),
+            ],
+          );
+        });
+        continue;
+      }
+
+      if (!ncIsUndefined(data[column.column_name]) && !isInsertData) {
+        updatedColIds.push(column.id);
+      }
+
       if (
         !ncIsUndefined(data[column.column_name]) &&
         !ncIsNull(data[column.column_name]) &&
@@ -6854,6 +6921,12 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
 
           data[column.column_name] = JSON.stringify(obj);
         }
+      }
+    }
+
+    if (runAfterForLoop.length) {
+      for (const fn of runAfterForLoop) {
+        await fn();
       }
     }
   }

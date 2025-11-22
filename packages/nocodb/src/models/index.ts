@@ -61,4 +61,3 @@ export { default as OAuthAuthorizationCode } from './OAuthAuthorizationCode';
 export { default as OAuthToken } from './OAuthToken';
 export { default as WorkspaceUser } from './WorkspaceUser';
 export { default as Workspace } from './Workspace';
-export { default as LastModColumn } from './LastModColumn';

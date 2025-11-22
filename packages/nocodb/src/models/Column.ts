@@ -10,7 +10,7 @@ import {
 import { Logger } from '@nestjs/common';
 import type { MetaService } from 'src/meta/meta.service';
 import type { ColumnReqType, ColumnType, LookupType } from 'nocodb-sdk';
-import type { NcContext } from '~/interface/config';
+import { NcContext } from '~/interface/config';
 import FormulaColumn from '~/models/FormulaColumn';
 import LinkToAnotherRecordColumn from '~/models/LinkToAnotherRecordColumn';
 import LookupColumn from '~/models/LookupColumn';

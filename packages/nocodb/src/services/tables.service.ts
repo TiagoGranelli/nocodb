@@ -9,6 +9,8 @@ import {
   isOrderCol,
   isVirtualCol,
   ModelTypes,
+  NcApiVersion,
+  NcBaseError,
   ProjectRoles,
   RelationTypes,
   UITypes,
@@ -43,6 +45,7 @@ import { MetaTable } from '~/utils/globals';
 import NocoSocket from '~/socket/NocoSocket';
 import { isEE } from '~/utils';
 import { META_COL_NAME } from '~/constants';
+import { DriverClient } from '~/utils/nc-config';
 
 @Injectable()
 export class TablesService {

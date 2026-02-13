@@ -7,17 +7,39 @@ const { tempFiles, addFiles, clearFiles, closeModal, isLoading } = useUploadStat
 
 const videoStream = ref<MediaStream | null>(null)
 const permissionGranted = ref(false)
+const facingMode = ref<'user' | 'environment'>('environment')
+const hasMultipleCameras = ref(false)
 
 const capturedImage = computed(() => tempFiles.value[0] || null)
 const videoRef = ref<HTMLVideoElement | undefined>()
 const canvasRef = ref<HTMLCanvasElement | undefined>()
 
+const checkMultipleCameras = async () => {
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices()
+    const videoDevices = devices.filter((d) => d.kind === 'videoinput')
+    hasMultipleCameras.value = videoDevices.length > 1
+  } catch {
+    hasMultipleCameras.value = false
+  }
+}
+
 const startCamera = async () => {
   try {
-    if (!videoStream.value) {
-      videoStream.value = await navigator.mediaDevices.getUserMedia({ video: true })
+    // Stop any existing stream before starting a new one
+    if (videoStream.value) {
+      for (const track of videoStream.value.getTracks()) {
+        track.stop()
+      }
+      videoStream.value = null
     }
+
+    videoStream.value = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: facingMode.value },
+    })
     permissionGranted.value = true
+
+    await checkMultipleCameras()
 
     // Wait for next tick to ensure video element is rendered
     await nextTick()
@@ -35,8 +57,17 @@ const startCamera = async () => {
   }
 }
 
+const switchCamera = () => {
+  facingMode.value = facingMode.value === 'user' ? 'environment' : 'user'
+  startCamera()
+}
+
 const stopCamera = () => {
-  videoStream.value?.getTracks().forEach((track) => track.stop())
+  if (videoStream.value) {
+    for (const track of videoStream.value.getTracks()) {
+      track.stop()
+    }
+  }
   videoStream.value = null
 
   if (videoRef.value) {
@@ -56,8 +87,10 @@ const captureImage = () => {
 
   if (context) {
     canvas.style.display = 'block'
-    context.translate(canvas.width, 0)
-    context.scale(-1, 1)
+    if (facingMode.value === 'user') {
+      context.translate(canvas.width, 0)
+      context.scale(-1, 1)
+    }
     context.drawImage(video, 0, 0, canvas.width, canvas.height)
     canvas.toBlob((blob) => {
       if (!blob) return
@@ -113,11 +146,26 @@ onBeforeUnmount(() => {
       class="w-full gap-3 h-full flex-col flex items-center justify-between"
     >
       <div v-show="!capturedImage" class="w-full gap-3 h-full flex-col flex items-center justify-between">
-        <video ref="videoRef" class="rounded-md w-full aspect-video max-w-md flex-1 object-contain" autoplay playsinline></video>
+        <video
+          ref="videoRef"
+          class="rounded-md w-full aspect-video max-w-md flex-1 object-contain"
+          :style="{ transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }"
+          autoplay
+          playsinline
+        ></video>
 
-        <NcButton class="!rounded-full !px-0" :disabled="isLoading" @click="captureImage">
-          <mdi-camera class="text-xl" />
-        </NcButton>
+        <div class="flex items-center gap-3">
+          <NcButton class="!rounded-full !px-0" :disabled="isLoading" @click="captureImage">
+            <mdi-camera class="text-xl" />
+          </NcButton>
+
+          <NcTooltip v-if="hasMultipleCameras">
+            <NcButton type="secondary" class="!rounded-full !px-0" :disabled="isLoading" size="small" @click="switchCamera">
+              <GeneralIcon icon="refresh" />
+            </NcButton>
+            <template #title> {{ $t('labels.switchCamera') }} </template>
+          </NcTooltip>
+        </div>
       </div>
 
       <div v-show="capturedImage" class="flex group flex-col">

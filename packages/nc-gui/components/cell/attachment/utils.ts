@@ -62,6 +62,9 @@ export const [useProvideAttachmentCell, useAttachmentCell] = useInjectionState(
 
     const permissionGranted = ref(false)
 
+    const facingMode = ref<'user' | 'environment'>('environment')
+    const hasMultipleCameras = ref(false)
+
     // User can drag and drop files multiple times so we have to keep track of that and reduce count after upload are done
     const uploadingCount = ref(0)
 
@@ -91,16 +94,41 @@ export const [useProvideAttachmentCell, useAttachmentCell] = useInjectionState(
       }),
     }
 
-    const startCamera = async () => {
-      if (!videoStream.value) {
-        videoStream.value = await navigator.mediaDevices.getUserMedia({ video: true })
+    const checkMultipleCameras = async () => {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices()
+        const videoDevices = devices.filter((d) => d.kind === 'videoinput')
+        hasMultipleCameras.value = videoDevices.length > 1
+      } catch {
+        hasMultipleCameras.value = false
       }
+    }
+
+    const startCamera = async () => {
+      if (videoStream.value) {
+        for (const track of videoStream.value.getTracks()) {
+          track.stop()
+        }
+        videoStream.value = null
+      }
+      videoStream.value = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: facingMode.value },
+      })
       permissionGranted.value = true
+      await checkMultipleCameras()
     }
 
     const stopCamera = () => {
-      videoStream.value?.getTracks().forEach((track) => track.stop())
+      if (videoStream.value) {
+        for (const track of videoStream.value.getTracks()) {
+          track.stop()
+        }
+      }
       videoStream.value = null
+    }
+
+    const switchCamera = () => {
+      facingMode.value = facingMode.value === 'user' ? 'environment' : 'user'
     }
 
     /** our currently visible items, either the locally stored or the ones from db, depending on isPublic & isForm status */
@@ -578,8 +606,11 @@ export const [useProvideAttachmentCell, useAttachmentCell] = useInjectionState(
       defaultAttachmentMeta,
       startCamera,
       stopCamera,
+      switchCamera,
       videoStream,
       permissionGranted,
+      facingMode,
+      hasMultipleCameras,
       isRenameModalOpen,
       updateAttachmentTitle,
       isEditAllowed,

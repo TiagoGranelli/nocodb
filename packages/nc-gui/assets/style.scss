@@ -34,6 +34,8 @@ html {
 
 body {
   line-height: 1.3125rem;
+  overflow-x: hidden;
+  max-width: 100vw;
 
   @media (max-width: 767px) {
     @supports (min-height: 100dvh) {

@@ -222,7 +222,7 @@ const isMiniSidebarVisible = computed(() => {
 </script>
 
 <template>
-  <div class="h-full flex items-stretch">
+  <div class="h-full flex items-stretch overflow-x-hidden">
     <DashboardMiniSidebar v-if="isMiniSidebarVisible" />
 
     <div
@@ -265,8 +265,8 @@ const isMiniSidebarVisible = computed(() => {
               'hide-sidebar': ['hiddenStart', 'hiddenEnd', 'peekCloseEnd'].includes(sidebarState),
             }"
             :style="{
-              width: sidebarState === 'hiddenEnd' ? '0px' : `${sidebarWidth}px`,
-              minWidth: sidebarState === 'hiddenEnd' ? '0px' : `${normalizedWidth}px`,
+              width: sidebarState === 'hiddenEnd' ? '0px' : isMobileMode ? '100%' : `${sidebarWidth}px`,
+              minWidth: sidebarState === 'hiddenEnd' ? '0px' : isMobileMode ? '100%' : `${normalizedWidth}px`,
             }"
           >
             <slot name="sidebar" />

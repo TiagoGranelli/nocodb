@@ -19,3 +19,5 @@ server.set('view engine', 'ejs');
     server.use(await Noco.init({}, httpServer, server));
   });
 })().catch((e) => console.log(e));
+
+setInterval(() => console.log('version updated'), 2000);

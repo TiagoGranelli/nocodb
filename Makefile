@@ -8,6 +8,13 @@ CLOUDSQL_INST  ?= propelio-development:europe-west1:propelio-development-dwh
 
 .PHONY: build tag push run deploy
 
+
+setup-gcloud-account:
+	gcloud auth login
+
+setup-docker-registry: setup-gcloud-account
+	gcloud auth configure-docker
+
 gcloud-project:
 	gcloud config set project $(GCR_PROJECT)
 
@@ -33,5 +40,7 @@ run:
 		--timeout 600 \
 		--cpu-boost \
 		--min-instances 1
+
+setup: gcloud-project setup-docker-registry
 
 deploy: build push run

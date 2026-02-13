@@ -1279,6 +1279,7 @@
     "browseFiles": "browse files",
     "clickTo": "Click to",
     "allowAccessToYourCamera": "Please allow access to your camera",
+    "switchCamera": "Switch camera",
     "openFile": "Open file",
     "enterValidUrl": "Enter a valid URL to upload files",
     "addFilesFromUrl": "Add files from URL",

@@ -6,7 +6,16 @@ const emits = defineEmits<{
   'upload': [fileList: File[]]
 }>()
 
-const { isLoading, startCamera: _startCamera, stopCamera: _stopCamera, videoStream, permissionGranted } = useAttachmentCell()!
+const {
+  isLoading,
+  startCamera: _startCamera,
+  stopCamera: _stopCamera,
+  switchCamera: _switchCamera,
+  videoStream,
+  permissionGranted,
+  facingMode,
+  hasMultipleCameras,
+} = useAttachmentCell()!
 
 const { isMobileMode } = useGlobal()
 
@@ -19,7 +28,9 @@ const startCamera = async () => {
     await _startCamera()
     if (!videoRef.value || !videoStream.value) return
     videoRef.value.srcObject = videoStream.value
-  } catch (error) {}
+  } catch (error) {
+    console.error('Error starting camera:', error)
+  }
 }
 
 const stopCamera = () => {
@@ -27,6 +38,11 @@ const stopCamera = () => {
   if (videoRef.value) {
     videoRef.value.srcObject = null
   }
+}
+
+const switchCamera = async () => {
+  _switchCamera()
+  await startCamera()
 }
 
 const retakeImage = () => {
@@ -46,8 +62,10 @@ const captureImage = () => {
 
   if (context) {
     canvas.style.display = 'block'
-    context.translate(canvas.width, 0)
-    context.scale(-1, 1)
+    if (facingMode.value === 'user') {
+      context.translate(canvas.width, 0)
+      context.scale(-1, 1)
+    }
     context.drawImage(video, 0, 0, canvas.width, canvas.height)
     canvas.toBlob((blob) => {
       if (!blob) return
@@ -104,11 +122,26 @@ onBeforeUnmount(() => {
         v-show="!capturedImage"
         class="w-full gap-3 h-full flex-col flex items-center justify-between border border-nc-border-red"
       >
-        <video ref="videoRef" class="rounded-md w-full aspect-video max-w-md flex-1 object-contain" autoplay></video>
+        <video
+          ref="videoRef"
+          class="rounded-md w-full aspect-video max-w-md flex-1 object-contain"
+          :style="{ transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }"
+          autoplay
+          playsinline
+        ></video>
 
-        <NcButton class="!rounded-full !px-0" @click="captureImage">
-          <mdi-camera class="text-xl" />
-        </NcButton>
+        <div class="flex items-center gap-3">
+          <NcButton class="!rounded-full !px-0" @click="captureImage">
+            <mdi-camera class="text-xl" />
+          </NcButton>
+
+          <NcTooltip v-if="hasMultipleCameras">
+            <NcButton type="secondary" class="!rounded-full !px-0" size="small" @click="switchCamera">
+              <GeneralIcon icon="refresh" />
+            </NcButton>
+            <template #title> {{ $t('labels.switchCamera') }} </template>
+          </NcTooltip>
+        </div>
       </div>
 
       <div v-show="capturedImage" class="flex group flex-col">
@@ -144,9 +177,4 @@ onBeforeUnmount(() => {
   </div>
 </template>
 
-<style scoped lang="scss">
-video {
-  -webkit-transform: scaleX(-1);
-  transform: scaleX(-1);
-}
-</style>
+

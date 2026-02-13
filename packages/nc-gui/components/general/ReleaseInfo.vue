@@ -50,35 +50,6 @@ onMounted(async () => await fetchReleaseInfo())
 
       <template #overlay>
         <div class="mt-1 bg-nc-bg-default shadow-lg !border">
-          <nuxt-link
-            no-prefetch
-            no-rel
-            class="!text-primary !no-underline"
-            to="https://github.com/nocodb/nocodb/releases"
-            target="_blank"
-          >
-            <div class="nc-menu-item">
-              <mdi-script-text-outline />
-              {{ latestRelease }} {{ $t('activity.upgrade.releaseNote') }}
-            </div>
-          </nuxt-link>
-
-          <nuxt-link
-            no-prefetch
-            rel="noopener"
-            class="!text-primary !no-underline"
-            to="https://nocodb.com/docs/self-hosting/upgrading"
-            target="_blank"
-          >
-            <div class="nc-menu-item">
-              <mdi-rocket-launch-outline />
-              <!-- How to upgrade? -->
-              {{ $t('activity.upgrade.howTo') }}
-            </div>
-          </nuxt-link>
-
-          <a-divider class="!m-0" />
-
           <div class="nc-menu-item" @click="releaseAlert = false">
             <mdi-close />
             <!-- Hide menu -->

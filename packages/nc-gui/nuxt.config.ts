@@ -88,9 +88,9 @@ export default defineNuxtConfig({
           content: process.env.npm_package_description || '',
         },
         // Open Graph
-        { hid: 'og:site_name', property: 'og:site_name', content: 'NocoDB' },
+        { hid: 'og:site_name', property: 'og:site_name', content: 'Propelio' },
         { hid: 'og:type', property: 'og:type', content: 'website' },
-        { hid: 'og:title', property: 'og:title', content: 'NocoDB' },
+        { hid: 'og:title', property: 'og:title', content: 'Propelio' },
         {
           hid: 'og:description',
           property: 'og:description',
@@ -100,7 +100,7 @@ export default defineNuxtConfig({
         { hid: 'og:url', property: 'og:url', content: 'https://nocodb.com' },
         // Twitter
         { hid: 'twitter:card', name: 'twitter:card', content: 'summary_large_image' },
-        { hid: 'twitter:title', name: 'twitter:title', content: 'NocoDB' },
+        { hid: 'twitter:title', name: 'twitter:title', content: 'Propelio' },
         {
           hid: 'twitter:description',
           name: 'twitter:description',

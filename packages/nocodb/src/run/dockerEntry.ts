@@ -20,4 +20,3 @@ server.set('view engine', 'ejs');
   });
 })().catch((e) => console.log(e));
 
-setInterval(() => console.log('version updated'), 2000);

@@ -164,7 +164,12 @@ export function getMouseClickType(e: MouseEvent | PointerEvent) {
     if (isTouch && (e.detail === 0 || e.detail === undefined)) {
       return MouseClickType.SINGLE_CLICK
     }
-    return e.detail === 1 ? MouseClickType.SINGLE_CLICK : MouseClickType.DOUBLE_CLICK
+    // Only treat detail >= 2 as double click. detail of 0 or undefined (e.g., from pointerup events,
+    // synthesized events, or edge cases) should be treated as single click, not double click.
+    if (e.detail >= 2) {
+      return MouseClickType.DOUBLE_CLICK
+    }
+    return MouseClickType.SINGLE_CLICK
   }
 
   return null

@@ -995,6 +995,7 @@ let prevMenuState: {
 } = {}
 
 let pointerUpListener: ((e: PointerEvent) => void) | null = null
+let lastPointerDownClickType: ReturnType<typeof getMouseClickType> = null
 let lastTapTime = 0
 let lastTapPosition = { x: 0, y: 0 }
 const DOUBLE_TAP_DELAY = 300
@@ -1003,6 +1004,14 @@ const DOUBLE_TAP_THRESHOLD = 10
 const iosFocusProxyRef = ref<HTMLInputElement>()
 
 async function handlePointerDown(e: PointerEvent) {
+  // Clean up any stale listener from a previous pointerdown that never got a pointerup
+  // (e.g., user alt-tabbed, pointer left window, etc.)
+  if (pointerUpListener) {
+    document.removeEventListener('pointerup', pointerUpListener)
+    document.removeEventListener('pointercancel', pointerUpListener)
+    pointerUpListener = null
+  }
+
   const _elementMap = new CanvasElement(elementMap.elements)
   pointerUpListener = (ev) => handlePointerUp(ev, _elementMap)
   document.addEventListener('pointerup', pointerUpListener)
@@ -1046,6 +1055,7 @@ async function handlePointerDown(e: PointerEvent) {
 
   const clickType = getMouseClickType(e)
   if (!clickType) return
+  lastPointerDownClickType = clickType
   // Handle all Column Header Operations
   if (y <= headerRowHeight.value) {
     // If x less than 80px, use is hovering over the row meta column
@@ -1080,7 +1090,11 @@ async function handlePointerDown(e: PointerEvent) {
     return
   }
 
-  const element = _elementMap.findElementAt(mousePosition.x, mousePosition.y, [
+  const element = _elementMap.findElementAt(x, y, [
+    ElementTypes.ADD_NEW_ROW,
+    ElementTypes.ROW,
+    ElementTypes.GROUP,
+  ]) || elementMap.findElementAt(x, y, [
     ElementTypes.ADD_NEW_ROW,
     ElementTypes.ROW,
     ElementTypes.GROUP,
@@ -1152,7 +1166,7 @@ async function handlePointerDown(e: PointerEvent) {
   }
 
   if (clickType !== MouseClickType.DOUBLE_CLICK) {
-    prevActiveCell = activeCell.value
+    prevActiveCell = { ...activeCell.value, path: [...(activeCell.value?.path ?? [])] }
     // If the cell is not double-clicked, continue to onMouseDownSelectionHandler
     onMouseDownSelectionHandler(e)
   }
@@ -1241,7 +1255,11 @@ function clearColAutoScrollTimer() {
 }
 
 async function handlePointerUp(e: PointerEvent, _elementMap: CanvasElement) {
-  e.preventDefault()
+  // Only preventDefault when the event target is inside the canvas wrapper
+  // to avoid blocking click events on sibling elements like toolbar buttons
+  if (e.cancelable && wrapperRef.value?.contains(e.target as Node)) {
+    e.preventDefault()
+  }
 
   clearColAutoScrollTimer()
 
@@ -1313,12 +1331,14 @@ async function handlePointerUp(e: PointerEvent, _elementMap: CanvasElement) {
   }
   if (isRowReorderActive.value) return
 
-  const clickType = getMouseClickType(e)
+  const clickType = lastPointerDownClickType || getMouseClickType(e)
+  lastPointerDownClickType = null
   if (!clickType) return
 
   if (isMobileMode.value) {
     if (y > headerRowHeight.value && y < height.value - 36) {
       const element = _elementMap.findElementAt(x, y, [ElementTypes.ROW, ElementTypes.GROUP, ElementTypes.ADD_NEW_ROW])
+        || elementMap.findElementAt(x, y, [ElementTypes.ROW, ElementTypes.GROUP, ElementTypes.ADD_NEW_ROW])
       const group = element?.group
       const row = element?.row
       const rowIndex = row?.rowMeta?.rowIndex ?? -1
@@ -1513,6 +1533,7 @@ async function handlePointerUp(e: PointerEvent, _elementMap: CanvasElement) {
   }
 
   const element = _elementMap.findElementAt(x, y, [ElementTypes.ADD_NEW_ROW, ElementTypes.ROW, ElementTypes.GROUP])
+    || elementMap.findElementAt(x, y, [ElementTypes.ADD_NEW_ROW, ElementTypes.ROW, ElementTypes.GROUP])
   let group = element?.group
   const row = element?.row
   const rowIndex = row?.rowMeta?.rowIndex ?? -1
@@ -1749,6 +1770,18 @@ async function handlePointerUp(e: PointerEvent, _elementMap: CanvasElement) {
   // If the cell is editable, make the cell editable
   // Virtual Cells BARCODE, QRCode, Lookup, we need to render the actual cell if double clicked
   if (clickType === MouseClickType.DOUBLE_CLICK) {
+    if (NO_EDITABLE_CELL.includes(columnUIType)) return
+
+    const supportedVirtualColumns = [UITypes.Barcode, UITypes.QrCode, UITypes.Lookup]
+    if (!supportedVirtualColumns.includes(columnUIType) && clickedColumn?.virtual) return
+    makeCellEditable(row, clickedColumn)
+  } else if (
+    clickType === MouseClickType.SINGLE_CLICK &&
+    prevActiveCell?.row === rowIndex &&
+    prevActiveCell?.column === colIndex &&
+    comparePath(prevActiveCell?.path, groupPath)
+  ) {
+    // Single click on an already-focused cell enters edit mode (consistent with touch double-tap behavior)
     if (NO_EDITABLE_CELL.includes(columnUIType)) return
 
     const supportedVirtualColumns = [UITypes.Barcode, UITypes.QrCode, UITypes.Lookup]

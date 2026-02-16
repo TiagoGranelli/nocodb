@@ -353,10 +353,19 @@ watch(
     <div v-if="!isSharedBase" class="text-nc-content-gray-muted font-medium pl-3.5 mb-1">{{ $t('objects.projects') }}</div>
     <div mode="inline" class="nc-treeview pb-0.5 flex-grow min-h-50 overflow-x-hidden">
       <div v-if="basesList?.length">
+        <!-- On mobile, skip Draggable entirely to avoid touch event interference with scrolling -->
+        <template v-if="isMobileMode">
+          <div v-for="baseItem in basesList" :key="baseItem.id">
+            <ProjectWrapper :base-role="baseItem.project_role" :base="baseItem">
+              <DashboardTreeViewProjectNode />
+            </ProjectWrapper>
+          </div>
+        </template>
         <Draggable
+          v-else
           v-bind="getDraggableAutoScrollOptions({ scrollSensitivity: 50 })"
           :model-value="basesList"
-          :disabled="isMobileMode || !isUIAllowed('baseReorder') || basesList?.length < 2"
+          :disabled="!isUIAllowed('baseReorder') || basesList?.length < 2"
           item-key="id"
           handle=".base-title-node"
           ghost-class="ghost"
